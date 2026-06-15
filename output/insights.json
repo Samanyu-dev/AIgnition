@@ -1,0 +1,40 @@
+{
+  "summary": "Google Search remains the anchor of profitability, while Meta shows signs of audience fatigue and Bing suffers from a critical structural failure requiring immediate pause.",
+  "drivers": [
+    {
+      "title": "Search Outperforms PMax Efficiency",
+      "detail": "Search_TM_Campaign_01 generates 17% of total portfolio revenue ($1.27M) at 6.32x ROAS with only 22% of Google's total spend. Any Q4 budget cut to this campaign would be catastrophically disproportionate to the savings achieved."
+    },
+    {
+      "title": "High Value Meta Campaigns",
+      "detail": "Remarketing_Brand_Campaign_03 yields an exceptional 18.33x ROAS on $380K revenue, confirming it as the best risk-adjusted return vehicle in the portfolio."
+    }
+  ],
+  "risks": [
+    {
+      "title": "Meta Audience Saturation",
+      "detail": "Meta's overall ROAS has declined sharply from ~13x to ~6.5x over recent weeks, indicating heavy audience saturation that threatens future scalability."
+    },
+    {
+      "title": "Bing Structural Failure",
+      "detail": "Bing ROAS collapsed below 0.1x in Feb-Mar 2026, with 22 of 28 campaigns producing absolutely zero revenue despite continued $2K-$3K monthly spend. This is a severe, active capital bleed."
+    }
+  ],
+  "recommendations": [
+    {
+      "action": "Pause Failing Bing Spend",
+      "channel": "Bing",
+      "impact": "Immediately halt spend on the 22 zero-revenue Bing campaigns to prevent further capital bleed, reallocating those funds to Google Search."
+    },
+    {
+      "action": "Refresh Meta Creative",
+      "channel": "Meta",
+      "impact": "Combat the steep ROAS drop (13x to 6.5x) by rotating fresh creative into Prospecting_Brand_Campaign_02 to overcome ad fatigue."
+    },
+    {
+      "action": "Protect Google Brand Search",
+      "channel": "Google",
+      "impact": "Ringfence budget for Search_TM_Campaign_01 heading into Q4, as it drives predictable 6.32x returns and anchors the entire portfolio."
+    }
+  ]
+}
