@@ -20,3 +20,32 @@ meta_path  = find_file(args.data_dir, 'meta')
 bing = pd.read_csv(bing_path)
 goog = pd.read_csv(goog_path)
 meta = pd.read_csv(meta_path)
+
+# BING normalization
+bing['date']          = pd.to_datetime(bing['TimePeriod'])
+bing['revenue']       = bing['Revenue'].fillna(0)
+bing['spend']         = bing['Spend'].fillna(0)
+bing['campaign_type'] = bing['CampaignType']
+bing['campaign_name'] = bing['CampaignName']
+bing['channel']       = 'Bing'
+
+# GOOGLE normalization — CRITICAL: divide cost by 1,000,000
+goog['date']          = pd.to_datetime(goog['segments_date'])
+goog['revenue']       = goog['metrics_conversions_value'].fillna(0)
+goog['spend']         = goog['metrics_cost_micros'].fillna(0) / 1_000_000   # DO NOT FORGET THIS
+goog['campaign_type'] = goog['campaign_advertising_channel_type']
+goog['campaign_name'] = goog['campaign_name']
+goog['channel']       = 'Google'
+
+# META normalization
+meta['date']          = pd.to_datetime(meta['date_start'])
+meta['revenue']       = meta['conversion'].fillna(0)
+meta['spend']         = meta['spend'].fillna(0)
+meta['campaign_type'] = meta['campaign_name'].str.split('_').str[:2].str.join('_')
+meta['campaign_name'] = meta['campaign_name']
+meta['channel']       = 'Meta'
+
+# Keep only unified columns
+cols = ['date','channel','campaign_type','campaign_name','revenue','spend']
+all_df = pd.concat([bing[cols], goog[cols], meta[cols]], ignore_index=True)
+all_df = all_df[all_df['spend'] >= 0].copy()
