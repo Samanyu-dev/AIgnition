@@ -97,3 +97,15 @@ camp_baselines['daily_rev']   = camp_baselines['total_rev']   / camp_baselines['
 camp_baselines['daily_spend'] = camp_baselines['total_spend'] / camp_baselines['n_days'].clip(lower=1)
 camp_baselines['roas']        = camp_baselines['total_rev']   / camp_baselines['total_spend'].clip(lower=0.01)
 # Campaigns with zero revenue keep roas=0 — that is correct, not an error
+
+features = {
+    'all_df':              all_df,
+    'weekly_channel':      weekly_channel,
+    'channel_baselines':   channel_baselines,
+    'channel_seasonality': channel_seasonality,
+    'camp_baselines':      camp_baselines,
+}
+with open(args.out, 'wb') as f:
+    pickle.dump(features, f)
+print(f"Features saved to {args.out}")
+print(f"  Rows: {len(all_df)}, Campaigns: {all_df['campaign_name'].nunique()}")
