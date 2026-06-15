@@ -83,3 +83,17 @@ for ch in ['Google','Meta','Bing']:
         'recent_avg_revenue':  recent['revenue'].mean(),
         'n_weeks':             len(w),
     }
+
+camp_baselines = (
+    all_df.groupby(['channel','campaign_type','campaign_name'])
+    .agg(
+        total_rev   = ('revenue','sum'),
+        total_spend = ('spend','sum'),
+        n_days      = ('date','count'),
+    )
+    .reset_index()
+)
+camp_baselines['daily_rev']   = camp_baselines['total_rev']   / camp_baselines['n_days'].clip(lower=1)
+camp_baselines['daily_spend'] = camp_baselines['total_spend'] / camp_baselines['n_days'].clip(lower=1)
+camp_baselines['roas']        = camp_baselines['total_rev']   / camp_baselines['total_spend'].clip(lower=0.01)
+# Campaigns with zero revenue keep roas=0 — that is correct, not an error
