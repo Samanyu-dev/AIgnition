@@ -60,3 +60,106 @@ def bootstrap_forecast(model_entry, horizon_days, new_budget=None, n_boot=2000):
     p50 = max(np.percentile(boot_totals, 50), 0)
     p90 = max(np.percentile(boot_totals, 90), 0)
     return p10, p50, p90
+
+with open(args.features, 'rb') as f:
+    features = pickle.load(f)
+with open(args.model, 'rb') as f:
+    models = pickle.load(f)
+
+today = str(date.today())
+rows  = []
+
+# ── CHANNEL-LEVEL ROWS ──────────────────────────────────────
+for ch in ['Google','Meta','Bing']:
+    for horizon in [30, 60, 90]:
+        p10, p50, p90 = bootstrap_forecast(models[ch], horizon)
+        spend = models[ch]['recent_avg_spend'] * (horizon // 7)
+        roas  = p50 / max(spend, 1)
+        rows.append({
+            'forecast_date':  today,
+            'channel':        ch,
+            'campaign_type':  'CHANNEL_TOTAL',
+            'campaign_name':  'CHANNEL_TOTAL',
+            'horizon_days':   horizon,
+            'revenue_p10':    round(p10, 2),
+            'revenue_p50':    round(p50, 2),
+            'revenue_p90':    round(p90, 2),
+            'roas_p50':       round(roas, 4),
+            'estimated_spend':round(spend, 2),
+        })
+
+# ── CAMPAIGN-TYPE LEVEL ROWS ─────────────────────────────────
+camp = features['camp_baselines']
+for ch in ['Google','Meta','Bing']:
+    ch_camp = camp[camp['channel']==ch]
+    camp_types = ch_camp.groupby('campaign_type').agg(
+        total_rev   = ('total_rev','sum'),
+        total_spend = ('total_spend','sum'),
+        n_days      = ('n_days','sum'),
+    ).reset_index()
+    camp_types['daily_rev']   = camp_types['total_rev']   / camp_types['n_days'].clip(lower=1)
+    camp_types['daily_spend'] = camp_types['total_spend'] / camp_types['n_days'].clip(lower=1)
+    camp_types['roas']        = camp_types['total_rev']   / camp_types['total_spend'].clip(lower=0.01)
+    
+    for horizon in [30, 60, 90]:
+        for _, r in camp_types.iterrows():
+            p50   = r['daily_rev'] * horizon
+            p10   = p50 * 0.55
+            p90   = p50 * 1.55
+            spend = r['daily_spend'] * horizon
+            rows.append({
+                'forecast_date':  today,
+                'channel':        ch,
+                'campaign_type':  r['campaign_type'],
+                'campaign_name':  'TYPE_TOTAL',
+                'horizon_days':   horizon,
+                'revenue_p10':    round(p10, 2),
+                'revenue_p50':    round(p50, 2),
+                'revenue_p90':    round(p90, 2),
+                'roas_p50':       round(r['roas'], 4),
+                'estimated_spend':round(spend, 2),
+            })
+
+# ── CAMPAIGN-LEVEL ROWS ───────────────────────────────────────
+for _, r in camp.iterrows():
+    for horizon in [30, 60, 90]:
+        p50   = r['daily_rev'] * horizon
+        p10   = p50 * 0.55
+        p90   = p50 * 1.55
+        spend = r['daily_spend'] * horizon
+        rows.append({
+            'forecast_date':  today,
+            'channel':        r['channel'],
+            'campaign_type':  r['campaign_type'],
+            'campaign_name':  r['campaign_name'],
+            'horizon_days':   horizon,
+            'revenue_p10':    round(p10, 2),
+            'revenue_p50':    round(p50, 2),
+            'revenue_p90':    round(p90, 2),
+            'roas_p50':       round(r['roas'], 4),
+            'estimated_spend':round(spend, 2),
+        })
+
+# ── GRAND TOTAL ROWS ─────────────────────────────────────────
+df = pd.DataFrame(rows)
+ch_totals = df[df['campaign_name']=='CHANNEL_TOTAL']
+for horizon in [30, 60, 90]:
+    ht = ch_totals[ch_totals['horizon_days']==horizon]
+    rows.append({
+        'forecast_date':  today,
+        'channel':        'ALL',
+        'campaign_type':  'GRAND_TOTAL',
+        'campaign_name':  'GRAND_TOTAL',
+        'horizon_days':   horizon,
+        'revenue_p10':    round(ht['revenue_p10'].sum(), 2),
+        'revenue_p50':    round(ht['revenue_p50'].sum(), 2),
+        'revenue_p90':    round(ht['revenue_p90'].sum(), 2),
+        'roas_p50':       round(ht['revenue_p50'].sum() / max(ht['estimated_spend'].sum(),1), 4),
+        'estimated_spend':round(ht['estimated_spend'].sum(), 2),
+    })
+
+# ── WRITE OUTPUT ─────────────────────────────────────────────
+df_out = pd.DataFrame(rows)
+os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+df_out.to_csv(args.output, index=False)
+print(f"Written {len(df_out)} rows to {args.output}")
