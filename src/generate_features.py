@@ -49,3 +49,16 @@ meta['channel']       = 'Meta'
 cols = ['date','channel','campaign_type','campaign_name','revenue','spend']
 all_df = pd.concat([bing[cols], goog[cols], meta[cols]], ignore_index=True)
 all_df = all_df[all_df['spend'] >= 0].copy()
+
+all_df['week'] = all_df['date'].dt.to_period('W')
+
+# Channel-level weekly aggregation (for the forecasting model)
+weekly_channel = (
+    all_df.groupby(['channel','week'])
+    .agg(revenue=('revenue','sum'), spend=('spend','sum'))
+    .reset_index()
+)
+weekly_channel = weekly_channel[weekly_channel['spend'] > 0].copy()
+weekly_channel['week_start'] = weekly_channel['week'].dt.start_time
+weekly_channel['roas'] = weekly_channel['revenue'] / weekly_channel['spend'].clip(lower=0.01)
+weekly_channel['week_of_year'] = weekly_channel['week_start'].dt.isocalendar().week.astype(int)
