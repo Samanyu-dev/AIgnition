@@ -72,3 +72,14 @@ for ch in ['Google','Meta','Bing']:
         channel_seasonality[ch] = sea.to_dict()
     else:
         channel_seasonality[ch] = {}
+
+channel_baselines = {}
+for ch in ['Google','Meta','Bing']:
+    w = weekly_channel[weekly_channel['channel']==ch].sort_values('week_start')
+    recent = w.tail(12)
+    channel_baselines[ch] = {
+        'recent_roas':         recent['revenue'].sum() / max(recent['spend'].sum(), 1),
+        'recent_avg_spend':    recent['spend'].mean(),
+        'recent_avg_revenue':  recent['revenue'].mean(),
+        'n_weeks':             len(w),
+    }
