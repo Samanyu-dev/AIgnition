@@ -62,3 +62,13 @@ weekly_channel = weekly_channel[weekly_channel['spend'] > 0].copy()
 weekly_channel['week_start'] = weekly_channel['week'].dt.start_time
 weekly_channel['roas'] = weekly_channel['revenue'] / weekly_channel['spend'].clip(lower=0.01)
 weekly_channel['week_of_year'] = weekly_channel['week_start'].dt.isocalendar().week.astype(int)
+
+channel_seasonality = {}
+for ch in ['Google','Meta','Bing']:
+    w = weekly_channel[weekly_channel['channel']==ch].copy()
+    global_mean = w['revenue'].mean()
+    if global_mean > 0:
+        sea = w.groupby('week_of_year')['revenue'].mean() / global_mean
+        channel_seasonality[ch] = sea.to_dict()
+    else:
+        channel_seasonality[ch] = {}
