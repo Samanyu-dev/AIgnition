@@ -68,8 +68,10 @@ with open(args.model, 'rb') as f:
 
 today = str(date.today())
 rows  = []
+print("\n=== [PHASE 3] PROBABILISTIC FORECASTING PIPELINE ===")
 
 # ── CHANNEL-LEVEL ROWS ──────────────────────────────────────
+print("[PREDICT] Generating Channel-Level Forecasts...")
 for ch in ['Google','Meta','Bing']:
     for horizon in [30, 60, 90]:
         p10, p50, p90 = bootstrap_forecast(models[ch], horizon)
@@ -89,6 +91,7 @@ for ch in ['Google','Meta','Bing']:
         })
 
 # ── CAMPAIGN-TYPE LEVEL ROWS ─────────────────────────────────
+print("[PREDICT] Generating Campaign-Type Level Forecasts...")
 camp = features['camp_baselines']
 for ch in ['Google','Meta','Bing']:
     ch_camp = camp[camp['channel']==ch]
@@ -121,6 +124,7 @@ for ch in ['Google','Meta','Bing']:
             })
 
 # ── CAMPAIGN-LEVEL ROWS ───────────────────────────────────────
+print("[PREDICT] Generating Campaign-Level Forecasts...")
 for _, r in camp.iterrows():
     for horizon in [30, 60, 90]:
         p50   = r['daily_rev'] * horizon
@@ -141,6 +145,7 @@ for _, r in camp.iterrows():
         })
 
 # ── GRAND TOTAL ROWS ─────────────────────────────────────────
+print("[PREDICT] Aggregating Grand Totals...")
 df = pd.DataFrame(rows)
 ch_totals = df[df['campaign_name']=='CHANNEL_TOTAL']
 for horizon in [30, 60, 90]:
@@ -159,7 +164,8 @@ for horizon in [30, 60, 90]:
     })
 
 # ── WRITE OUTPUT ─────────────────────────────────────────────
+print("[PREDICT] Compiling final submission file...")
 df_out = pd.DataFrame(rows)
 os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
 df_out.to_csv(args.output, index=False)
-print(f"Written {len(df_out)} rows to {args.output}")
+print(f"[PREDICT] SUCCESS! Written {len(df_out)} rows to {args.output}")

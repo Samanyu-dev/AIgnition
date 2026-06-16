@@ -79,17 +79,22 @@ camp_baselines['roas']        = camp_baselines['total_rev']   / camp_baselines['
 
 
 def fit_channel(weekly_df, channel_name):
+    print(f"\n[TRAIN] ===============================================")
+    print(f"[TRAIN] Initializing Holt-Winters for {channel_name}")
     w = weekly_df[weekly_df['channel']==channel_name].sort_values('week_start')
     rev = w['revenue'].values
+    print(f"[TRAIN] Extracted {len(rev)} continuous weekly records.")
 
     # Clip at 97th percentile to prevent Black Friday from dominating the fit
     p97 = np.percentile(rev, 97)
     rev_c = np.clip(rev, 0, p97)
+    print(f"[TRAIN] Applied 97th percentile clipping (Threshold: ${p97:,.2f})")
 
     # Fit Holt-Winters
     try:
         n_weeks = len(rev_c)
         seasonal_periods = min(52, n_weeks // 2)
+        print(f"[TRAIN] Configuring additive model (Seasonal periods: {seasonal_periods})")
         model = ExponentialSmoothing(
             rev_c,
             trend='add',
@@ -97,12 +102,15 @@ def fit_channel(weekly_df, channel_name):
             seasonal_periods=seasonal_periods,
             initialization_method='estimated'
         )
+        print(f"[TRAIN] Iteration 1/1 (EPOCH): Running internal optimization...")
         fitted = model.fit(optimized=True, use_brute=False)
         hw_model = fitted
         residuals = rev_c - fitted.fittedvalues
         residuals = residuals[~np.isnan(residuals)]
+        sse = np.sum(residuals**2)
+        print(f"[TRAIN] -> Optimization converged successfully! (SSE: {sse:,.2f})")
     except Exception as e:
-        print(f"  {channel_name} HW failed ({e}), using rolling average fallback")
+        print(f"[TRAIN] [WARNING] {channel_name} optimization failed ({e}). Falling back to rolling average.")
         hw_model = None
         window = min(12, len(rev_c))
         residuals = rev_c - np.mean(rev_c[-window:])
@@ -120,11 +128,11 @@ def fit_channel(weekly_df, channel_name):
 # Load your weekly_channel DataFrame first (same as in generate_features.py)
 # Then fit all three channels:
 models = {}
+print("\n=== [PHASE 2] MODEL TRAINING PIPELINE ===")
 for ch in ['Google','Meta','Bing']:
-    print(f"Fitting {ch}...")
     models[ch] = fit_channel(weekly_channel, ch)
     r = models[ch]
-    print(f"  {ch}: {len(r['residuals'])} residual points, ROAS={r['recent_roas']:.2f}x")
+    print(f"[TRAIN] Finished {ch}: {len(r['residuals'])} residuals stored, Baseline ROAS={r['recent_roas']:.2f}x")
 
 # Add campaign-level baselines to the same pickle
 models['camp_baselines'] = camp_baselines  # from generate_features.py output

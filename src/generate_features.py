@@ -21,7 +21,13 @@ bing = pd.read_csv(bing_path)
 goog = pd.read_csv(goog_path)
 meta = pd.read_csv(meta_path)
 
+print("=== [PHASE 1] FEATURE GENERATION PIPELINE ===")
+print(f"[EXTRACT] Loaded Bing data: {len(bing)} rows")
+print(f"[EXTRACT] Loaded Google data: {len(goog)} rows")
+print(f"[EXTRACT] Loaded Meta data: {len(meta)} rows")
+
 # BING normalization
+print("[TRANSFORM] Normalizing Bing schema...")
 bing['date']          = pd.to_datetime(bing['TimePeriod'])
 bing['revenue']       = bing['Revenue'].fillna(0)
 bing['spend']         = bing['Spend'].fillna(0)
@@ -30,6 +36,7 @@ bing['campaign_name'] = bing['CampaignName']
 bing['channel']       = 'Bing'
 
 # GOOGLE normalization — CRITICAL: divide cost by 1,000,000
+print("[TRANSFORM] Normalizing Google schema (applying 1e6 micros division to cost)...")
 goog['date']          = pd.to_datetime(goog['segments_date'])
 goog['revenue']       = goog['metrics_conversions_value'].fillna(0)
 goog['spend']         = goog['metrics_cost_micros'].fillna(0) / 1_000_000   # DO NOT FORGET THIS
@@ -38,6 +45,7 @@ goog['campaign_name'] = goog['campaign_name']
 goog['channel']       = 'Google'
 
 # META normalization
+print("[TRANSFORM] Normalizing Meta schema...")
 meta['date']          = pd.to_datetime(meta['date_start'])
 meta['revenue']       = meta['conversion'].fillna(0)
 meta['spend']         = meta['spend'].fillna(0)
@@ -46,6 +54,7 @@ meta['campaign_name'] = meta['campaign_name']
 meta['channel']       = 'Meta'
 
 # Keep only unified columns
+print("[TRANSFORM] Concatenating channels into unified schema...")
 cols = ['date','channel','campaign_type','campaign_name','revenue','spend']
 all_df = pd.concat([bing[cols], goog[cols], meta[cols]], ignore_index=True)
 all_df = all_df[all_df['spend'] >= 0].copy()
