@@ -21,6 +21,17 @@ bing = pd.read_csv(bing_path)
 goog = pd.read_csv(goog_path)
 meta = pd.read_csv(meta_path)
 
+def safe_col(df, col_name, fallback=None):
+    if col_name in df.columns:
+        return df[col_name]
+    # Check case-insensitive
+    lower_map = {c.lower(): c for c in df.columns}
+    if col_name.lower() in lower_map:
+        return df[lower_map[col_name.lower()]]
+    if fallback is not None:
+        return pd.Series([fallback] * len(df))
+    raise ValueError(f"Missing required column: {col_name}")
+
 print("=== [PHASE 1] FEATURE GENERATION PIPELINE ===")
 print(f"[EXTRACT] Loaded Bing data: {len(bing)} rows")
 print(f"[EXTRACT] Loaded Google data: {len(goog)} rows")
@@ -28,29 +39,30 @@ print(f"[EXTRACT] Loaded Meta data: {len(meta)} rows")
 
 # BING normalization
 print("[TRANSFORM] Normalizing Bing schema...")
-bing['date']          = pd.to_datetime(bing['TimePeriod'])
-bing['revenue']       = bing['Revenue'].fillna(0)
-bing['spend']         = bing['Spend'].fillna(0)
-bing['campaign_type'] = bing['CampaignType']
-bing['campaign_name'] = bing['CampaignName']
+bing['date']          = pd.to_datetime(safe_col(bing, 'TimePeriod'))
+bing['revenue']       = safe_col(bing, 'Revenue', 0).fillna(0)
+bing['spend']         = safe_col(bing, 'Spend', 0).fillna(0)
+bing['campaign_type'] = safe_col(bing, 'CampaignType', 'Unknown')
+bing['campaign_name'] = safe_col(bing, 'CampaignName', 'Unknown')
 bing['channel']       = 'Bing'
 
 # GOOGLE normalization — CRITICAL: divide cost by 1,000,000
 print("[TRANSFORM] Normalizing Google schema (applying 1e6 micros division to cost)...")
-goog['date']          = pd.to_datetime(goog['segments_date'])
-goog['revenue']       = goog['metrics_conversions_value'].fillna(0)
-goog['spend']         = goog['metrics_cost_micros'].fillna(0) / 1_000_000   # DO NOT FORGET THIS
-goog['campaign_type'] = goog['campaign_advertising_channel_type']
-goog['campaign_name'] = goog['campaign_name']
+goog['date']          = pd.to_datetime(safe_col(goog, 'segments_date'))
+goog['revenue']       = safe_col(goog, 'metrics_conversions_value', 0).fillna(0)
+goog['spend']         = safe_col(goog, 'metrics_cost_micros', 0).fillna(0) / 1_000_000   # DO NOT FORGET THIS
+goog['campaign_type'] = safe_col(goog, 'campaign_advertising_channel_type', 'Unknown')
+goog['campaign_name'] = safe_col(goog, 'campaign_name', 'Unknown')
 goog['channel']       = 'Google'
 
 # META normalization
 print("[TRANSFORM] Normalizing Meta schema...")
-meta['date']          = pd.to_datetime(meta['date_start'])
-meta['revenue']       = meta['conversion'].fillna(0)
-meta['spend']         = meta['spend'].fillna(0)
-meta['campaign_type'] = meta['campaign_name'].str.split('_').str[:2].str.join('_')
-meta['campaign_name'] = meta['campaign_name']
+meta['date']          = pd.to_datetime(safe_col(meta, 'date_start'))
+meta['revenue']       = safe_col(meta, 'conversion', 0).fillna(0)
+meta['spend']         = safe_col(meta, 'spend', 0).fillna(0)
+meta_camp_name        = safe_col(meta, 'campaign_name', 'Unknown_Campaign')
+meta['campaign_type'] = meta_camp_name.astype(str).str.split('_').str[:2].str.join('_')
+meta['campaign_name'] = meta_camp_name
 meta['channel']       = 'Meta'
 
 # Keep only unified columns

@@ -107,6 +107,13 @@ def fit_channel(weekly_df, channel_name):
         hw_model = fitted
         residuals = rev_c - fitted.fittedvalues
         residuals = residuals[~np.isnan(residuals)]
+        
+        # [P1.3] Fix systematic bias in residuals (e.g. Meta)
+        mean_res = np.mean(residuals)
+        if abs(mean_res) > np.std(residuals) * 0.2:
+            print(f"[TRAIN] Correcting systematic bias: Shifting residuals by {-mean_res:,.2f}")
+            residuals = residuals - mean_res
+            
         sse = np.sum(residuals**2)
         print(f"[TRAIN] -> Optimization converged successfully! (SSE: {sse:,.2f})")
     except Exception as e:

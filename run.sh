@@ -15,13 +15,18 @@ echo "Output path: $OUTPUT_PATH"
 mkdir -p "$(dirname "$OUTPUT_PATH")"
 
 # Step 1: Generate features from raw CSVs
-echo "[1/2] Generating features from $DATA_DIR..."
+echo "[1/3] Generating features from $DATA_DIR..."
 python src/generate_features.py \
     --data-dir "$DATA_DIR" \
     --out features.pkl
 
-# Step 2: Load model and generate predictions
-echo "[2/2] Generating probabilistic forecasts..."
+# Step 2: Retrain model on new data (P1.1)
+echo "[2/3] Retraining model on incoming data..."
+python src/train_model.py \
+    --data-dir "$DATA_DIR"
+
+# Step 3: Load model and generate predictions
+echo "[3/3] Generating probabilistic forecasts..."
 python src/predict.py \
     --features features.pkl \
     --model    "$MODEL_PATH" \
